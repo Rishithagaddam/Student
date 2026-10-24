@@ -1,0 +1,48 @@
+name: Student API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Install, test, and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        id: tests
+        run: npm test
+
+      - name: Build application
+        id: build
+        run: npm run build
+
+      - name: Report pipeline result
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          if [ "$TEST_OUTCOME" = "success" ] && [ "$BUILD_OUTCOME" = "success" ]; then
+            echo "## CI pipeline succeeded" >> "$GITHUB_STEP_SUMMARY"
+            echo "Dependencies installed; tests and build passed."
+          else
+            echo "## CI pipeline failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "Tests: $TEST_OUTCOME; build: $BUILD_OUTCOME."
+            exit 1
+          fi
